@@ -1,0 +1,2 @@
+Pmax=? [ F < 5 state=2];
+Pmin=? [ F < 5 state=1];

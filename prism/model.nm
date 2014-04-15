@@ -1,0 +1,6 @@
+dtmc
+
+x : [0..1] init 0;
+module x1
+
+endmodule

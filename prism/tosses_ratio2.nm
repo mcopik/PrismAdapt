@@ -1,0 +1,23 @@
+mdp
+// total number of tosses
+const int N = 100;
+// agent's observation precision
+const int PREC = 6;
+module toss
+tosses : [1..N] init 1;
+s0 : [0..3] init 0;
+head : [0..N] init 0;
+adapt_toss_ratio : [0..PREC-1] init 0;
+// toss
+[adapt_toss_fair] (s0=0) -> 0.5:(s0'=1) + 0.5:(s0'=2);
+[adapt_toss_skewed] (s0=0) -> 0.6:(s0'=1) + 0.4:(s0'=2);
+// head
+[] (s0=1) -> (head'=min(N, head+1)) & (s0'=3);
+// tail
+[] (s0=2) -> (s0'=3);
+// loop
+[] (s0=3) & (tosses<N) -> (adapt_toss_ratio'=min(PREC - 1,
+                          floor(head*PREC/(tosses + 1)))) &
+                          (tosses'=tosses+1) & (s0'=0);
+[] (s0=3) & (tosses=N) -> true;
+endmodule

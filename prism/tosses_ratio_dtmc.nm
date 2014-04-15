@@ -1,0 +1,36 @@
+mdp
+
+const double T0 = 1.0;
+const double T1 = 0.55;
+const double T2 = 0.75000006;
+const double T3 = 0.45;
+const double T4 = 1.0;
+const double T5 = 0.9500001;
+
+// total number of tosses
+const int N = 100;
+// agent's observation precision
+const int PREC = 6;
+module toss
+tosses : [1..N] init 1;
+s0 : [0..3] init 0;
+head : [0..N] init 0;
+adapt_toss_ratio : [0..PREC] init 0;
+
+// choose a coin
+[] (s0=0)&(adapt_toss_ratio=0) -> T0:(s0'=1) + (1-T0):(s0'=2);
+[] (s0=0)&(adapt_toss_ratio=1) -> T1:(s0'=1) + (1-T1):(s0'=2);
+[] (s0=0)&(adapt_toss_ratio=2) -> T2:(s0'=1) + (1-T2):(s0'=2);
+[] (s0=0)&(adapt_toss_ratio=3) -> T3:(s0'=1) + (1-T3):(s0'=2);
+[] (s0=0)&(adapt_toss_ratio=4) -> T4:(s0'=1) + (1-T4):(s0'=2);
+[] (s0=0)&(adapt_toss_ratio=5) -> T5:(s0'=1) + (1-T5):(s0'=2);
+// fair
+[] (s0=1) -> 0.5:(s0'=3)&(head'=min(N, head+1)) + 0.5:(s0'=3);
+// skewed
+[] (s0=2) -> 0.6:(s0'=3)&(head'=min(N, head+1)) + 0.4:(s0'=3);
+// loop
+[] (s0=3) & (tosses<N) -> (adapt_toss_ratio'=min(PREC - 1,
+                          floor(head*PREC/(tosses + 1)))) &
+                          (tosses'=tosses+1) & (s0'=0);
+[] (s0=3) & (tosses=N) -> true;
+endmodule

@@ -1,0 +1,4624 @@
+OpenJDK 64-Bit Server VM warning: You have loaded library /tmp/BridJExtractedLibraries8753901898532191349/libbridj.so which might have disabled stack guard. The VM will try to fix the stack guard now.
+It's highly recommended that you fix the library with 'execstack -c <libfile>', or link it with '-z noexecstack'.
+PRISM
+=====
+
+Version: 4.1.beta2
+Date: Tue Apr 15 10:45:08 CEST 2014
+Hostname: mcopik-ThinkPad-T61
+Command line: prism /home/mcopik/Projekty/PRISM/PrismAdapt/prism-fastsim/prism/tosses_ratio_frequent.nm /home/mcopik/Projekty/PRISM/PrismAdapt/prism-fastsim/prism/tosses.pctl -sim --simplatform opencl --simmethod ci --simconf 0.01 --const c=5 --simsamples 40000
+
+Parsing model file "/home/mcopik/Projekty/PRISM/PrismAdapt/prism-fastsim/prism/tosses_ratio_frequent.nm"...
+
+Parsing properties file "/home/mcopik/Projekty/PRISM/PrismAdapt/prism-fastsim/prism/tosses.pctl"...
+
+1 property:
+(1) Pmax=? [ F s0=3&tosses=N&head=N/2 ]
+
+Type:        MDP
+Modules:     toss 
+Variables:   tosses s0 head adapt_toss_ratio 
+
+---------------------------------------------------------------------
+
+Simulating: Pmax=? [ F s0=3&tosses=N&head=N/2 ]
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+#include "Random123/threefry.h"
+typedef struct _StateVector{
+uchar __STATE_VECTOR_s0;
+uchar __STATE_VECTOR_adapt_toss_ratio;
+uchar __STATE_VECTOR_tosses;
+uchar __STATE_VECTOR_head;
+} StateVector;
+
+typedef struct _PropertyState{
+bool propertyState;
+bool valueKnown;
+} PropertyState;
+
+#define R123_0x1p_31f (1.f/(1024.f*1024.f*1024.f*2.f))
+#define R123_0x1p_24f (128.f*R123_0x1p_31f)
+float u01fixedpt_closed_open_32_24( uint i) {
+return (i>>8)*R123_0x1p_24f;
+
+}
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) ;
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) ;
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) ;
+bool checkProperties( StateVector* sv, PropertyState* propertyState) ;
+char checkAdaptGuards( StateVector* sv) ;
+__kernel void main( __global uint* state, uint numberOfSimulations, uint sampleNumber, uint resultsOffset, uint pathOffset, __global float* probArray, __global uint* pathLengths, __global uchar* property0) {
+ushort time = 0;
+char guardNumber = 0;
+uchar selectionSize = 0;
+StateVector stateVector = {
+0,
+0,
+1,
+0
+};
+bool loopDetection = 0;
+uint pathLength = 0L;
+PropertyState properties[1] = {
+{ 0, 0 }
+};
+uint globalID = get_global_id(0);
+uchar guardsTab[4];
+if(globalID > numberOfSimulations) {
+ return;
+}
+
+threefry2x32_ctr_t ctr = {{0,sampleNumber+globalID+state[0]}};
+threefry2x32_key_t key = {{state[1],state[2]}};
+threefry2x32_ctr_t rand;
+
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+for(pathLength = 0;pathLength < 10000;++pathLength){
+if(pathLength % 2 == 0){
+rand = threefry2x32(ctr, key);
+ctr.v[0]++;
+
+}
+
+guardNumber = checkAdaptGuards(&stateVector);
+if(guardNumber == -1){
+selectionSize = checkNonsynGuards(&stateVector,guardsTab);
+if(selectionSize == 0){
+break;
+
+}
+
+}
+
+time++;
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+if(guardNumber == -1){
+loopDetection = updateNonsynGuards(&stateVector,guardsTab,u01fixedpt_closed_open_32_24(rand.v[pathLength%2]),selectionSize);
+}
+else {
+float rnd = u01fixedpt_closed_open_32_24(rand.v[pathLength%2]);
+loopDetection = false;
+switch(guardNumber){
+case 0:
+if(rnd < probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]){
+rnd /= probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0];
+if(rnd < (0.5) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+else {
+rnd = (rnd - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]) / (1 - probArray[stateVector.__STATE_VECTOR_adapt_toss_ratio + 0]);
+if(rnd < (0.6) ){
+stateVector.__STATE_VECTOR_s0 = 1;
+
+}
+else if(rnd < (1.0) ){
+stateVector.__STATE_VECTOR_s0 = 2;
+
+}
+
+}
+
+break;
+}
+
+}
+
+if(loopDetection == true && selectionSize == 1){
+if(checkProperties(&stateVector,properties)){
+break;
+
+}
+
+break;
+
+}
+
+
+}
+pathLengths[globalID + pathOffset] = pathLength;
+property0[globalID + resultsOffset] = properties[0].propertyState;
+
+
+}
+uchar checkNonsynGuards( StateVector* sv, uchar guardsTab[4]) {
+uchar counter = 0;
+if((((float)(*sv).__STATE_VECTOR_s0)==1)){
+guardsTab[counter++] = 0;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==2)){
+guardsTab[counter++] = 1;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)<100)){
+guardsTab[counter++] = 2;
+}
+
+if((((float)(*sv).__STATE_VECTOR_s0)==3)&&(((float)(*sv).__STATE_VECTOR_tosses)==100)){
+guardsTab[counter++] = 3;
+}
+
+if(counter != 4){
+guardsTab[counter] = 4;
+}
+
+return counter;
+
+}
+bool updateNonsynGuards( StateVector* sv, uchar* guardsTab, float selectionSum, uchar numberOfCommands) {
+bool changeFlag = 1;
+int oldValue = 0;
+uchar selection = floor(selectionSum * numberOfCommands);
+selectionSum = numberOfCommands * (selectionSum - ((float)selection) / numberOfCommands);
+switch(guardsTab[selection]){
+case 0:
+oldValue = (*sv).__STATE_VECTOR_head;
+changeFlag &= ((*sv).__STATE_VECTOR_head = min(((float)100),((float)((float)(*sv).__STATE_VECTOR_head))+1)) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 1:
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 3) == oldValue ? true : false;
+
+break;
+case 2:
+oldValue = (*sv).__STATE_VECTOR_adapt_toss_ratio;
+changeFlag &= ((*sv).__STATE_VECTOR_adapt_toss_ratio = max(((float)0),(float)min(((float)6-1),(float)floor((((float)((float)(*sv).__STATE_VECTOR_head))*1.0/((float)((float)(*sv).__STATE_VECTOR_tosses))-0.4)*6/0.2)))) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_tosses;
+changeFlag &= ((*sv).__STATE_VECTOR_tosses = ((float)((float)(*sv).__STATE_VECTOR_tosses))+1) == oldValue ? true : false;
+oldValue = (*sv).__STATE_VECTOR_s0;
+changeFlag &= ((*sv).__STATE_VECTOR_s0 = 0) == oldValue ? true : false;
+
+break;
+}
+
+return changeFlag;
+
+}
+bool checkProperties( StateVector* sv, PropertyState* propertyState) {
+bool allKnown = 1;
+uchar counter = 0;
+if(!(propertyState[counter].valueKnown)){
+allKnown = false;
+if(((float)(*sv).__STATE_VECTOR_s0)==3&&((float)(*sv).__STATE_VECTOR_tosses)==100&&((float)(*sv).__STATE_VECTOR_head)==100/2){
+propertyState[counter].propertyState = true;
+propertyState[counter].valueKnown = true;
+}
+
+allKnown = propertyState[counter].valueKnown;
+}
+
+return allKnown;
+
+}
+char checkAdaptGuards( StateVector* sv) {
+if((((float)(*sv).__STATE_VECTOR_s0)==0)){
+return 0;
+}
+
+return -1;
+
+}
+
+0 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.048300
+For: 0.39999998 0.45 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 311 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.050300
+For: 0.5 0.45 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 329 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.050300
+For: 0.5 0.45 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 338 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.050400
+For: 0.6 0.45 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 321 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.047425
+For: 0.39999998 0.55 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 325 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048850
+For: 0.5 0.55 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 352 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048850
+For: 0.5 0.55 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 314 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048700
+For: 0.6 0.55 0.5 0.5 0.5 0.5 
+Sampling: 40000 samples in 326 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.047750 CURRENT BEST 0.050400
+MAX 0.050400 [0.047582,0.053218]
+-----------
+1 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.048525
+For: 0.5 0.45 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 961 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.047850
+For: 0.5 0.45 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 659 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048650
+For: 0.6 0.45 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 669 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.047450
+For: 0.6 0.45 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 639 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048650
+For: 0.6 0.45 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 646 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.047450
+For: 0.6 0.45 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 684 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.049050
+For: 0.70000005 0.45 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 629 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.047525
+For: 0.70000005 0.45 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 648 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 40960 start 0 samples 40000
+new gw 40000 current max 0.047850
+-----------
+2 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.049175
+For: 0.6 0.39999998 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 1606 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.049200
+For: 0.6 0.5 0.45 0.5 0.5 0.5 
+Sampling: 40000 samples in 990 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048250
+For: 0.6 0.39999998 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 991 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.048225
+For: 0.6 0.5 0.55 0.5 0.5 0.5 
+Sampling: 40000 samples in 958 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.049100 CURRENT BEST 0.049200
+MAX 0.049200 [0.046414,0.051986]
+-----------
+3 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.045975
+For: 0.6 0.5 0.45 0.5 0.45 0.5 
+Sampling: 40000 samples in 2259 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.049750
+For: 0.6 0.5 0.45 0.5 0.55 0.5 
+Sampling: 40000 samples in 1306 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.051275 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.052400 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.053325 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.054775 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.056200 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.057825 CURRENT BEST 0.049750
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.057600 CURRENT BEST 0.049750
+MAX 0.049750 [0.046744,0.052756]
+-----------
+4 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.057725
+For: 0.55 0.5 0.45 0.5 0.8500001 0.5 
+Sampling: 40000 samples in 4859 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.056900
+For: 0.65000004 0.5 0.45 0.5 0.8500001 0.5 
+Sampling: 40000 samples in 1624 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.055650 CURRENT BEST 0.057725
+MAX 0.057725 [0.054721,0.060729]
+-----------
+5 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.054050
+For: 0.5 0.45 0.45 0.5 0.8000001 0.5 
+Sampling: 40000 samples in 5503 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.056650
+For: 0.5 0.45 0.45 0.5 0.9000001 0.5 
+Sampling: 40000 samples in 1950 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.056375
+For: 0.6 0.45 0.45 0.5 0.8000001 0.5 
+Sampling: 40000 samples in 1333 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.059575
+For: 0.6 0.45 0.45 0.5 0.9000001 0.5 
+Sampling: 40000 samples in 1290 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.055450
+For: 0.5 0.55 0.45 0.5 0.8000001 0.5 
+Sampling: 40000 samples in 970 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.057250
+For: 0.5 0.55 0.45 0.5 0.9000001 0.5 
+Sampling: 40000 samples in 1032 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.054925
+For: 0.6 0.55 0.45 0.5 0.8000001 0.5 
+Sampling: 40000 samples in 953 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.058000
+For: 0.6 0.55 0.45 0.5 0.9000001 0.5 
+Sampling: 40000 samples in 970 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.058675 CURRENT BEST 0.059575
+MAX 0.059575 [0.056526,0.062624]
+-----------
+6 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.056200
+For: 0.6 0.39999998 0.39999998 0.45 0.9000001 0.5 
+Sampling: 40000 samples in 6178 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.055250
+For: 0.6 0.5 0.39999998 0.45 0.9000001 0.5 
+Sampling: 40000 samples in 2293 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.056625
+For: 0.6 0.39999998 0.5 0.45 0.9000001 0.5 
+Sampling: 40000 samples in 1666 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.055000
+For: 0.6 0.5 0.5 0.45 0.9000001 0.5 
+Sampling: 40000 samples in 1618 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.060050
+For: 0.6 0.39999998 0.39999998 0.55 0.9000001 0.5 
+Sampling: 40000 samples in 1310 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.058850
+For: 0.6 0.5 0.39999998 0.55 0.9000001 0.5 
+Sampling: 40000 samples in 1388 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.060975
+For: 0.6 0.39999998 0.5 0.55 0.9000001 0.5 
+Sampling: 40000 samples in 1271 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.061625
+For: 0.6 0.5 0.5 0.55 0.9000001 0.5 
+Sampling: 40000 samples in 1289 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.065225 CURRENT BEST 0.061625
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.066825 CURRENT BEST 0.061625
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.068425 CURRENT BEST 0.061625
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.072275 CURRENT BEST 0.061625
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.070650 CURRENT BEST 0.061625
+MAX 0.061625 [0.058290,0.064960]
+-----------
+7 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.070175
+For: 0.6 0.65000004 0.70000005 0.75000006 0.9000001 0.45 
+Sampling: 40000 samples in 8223 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.075025
+For: 0.6 0.65000004 0.70000005 0.75000006 0.9000001 0.55 
+Sampling: 40000 samples in 2652 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.068450
+For: 0.6 0.75000006 0.70000005 0.75000006 0.9000001 0.45 
+Sampling: 40000 samples in 2015 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.071600
+For: 0.6 0.75000006 0.70000005 0.75000006 0.9000001 0.55 
+Sampling: 40000 samples in 1975 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.072225 CURRENT BEST 0.075025
+MAX 0.075025 [0.071632,0.078418]
+-----------
+8 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.072275
+For: 0.55 0.65000004 0.70000005 0.75000006 0.9000001 0.55 
+Sampling: 40000 samples in 8944 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.070725
+For: 0.65000004 0.65000004 0.70000005 0.75000006 0.9000001 0.55 
+Sampling: 40000 samples in 2974 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 40960 start 0 samples 40000
+new gw 40000 current max 0.072975
+-----------
+9 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.065375
+For: 0.6 0.65000004 0.70000005 0.70000005 0.8000001 0.55 
+Sampling: 40000 samples in 9592 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.069625
+For: 0.6 0.65000004 0.70000005 0.70000005 0.9000001 0.55 
+Sampling: 40000 samples in 3302 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.069625
+For: 0.6 0.65000004 0.70000005 0.8000001 0.8000001 0.55 
+Sampling: 40000 samples in 2349 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.072925
+For: 0.6 0.65000004 0.70000005 0.8000001 0.9000001 0.55 
+Sampling: 40000 samples in 2299 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.069625
+For: 0.6 0.65000004 0.70000005 0.70000005 0.9000001 0.55 
+Sampling: 40000 samples in 1644 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.070000
+For: 0.6 0.65000004 0.70000005 0.70000005 1.0 0.55 
+Sampling: 40000 samples in 1706 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.072925
+For: 0.6 0.65000004 0.70000005 0.8000001 0.9000001 0.55 
+Sampling: 40000 samples in 1607 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.076125
+For: 0.6 0.65000004 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 1613 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.076125 [0.072709,0.079541]
+-----------
+10 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.076700
+For: 0.6 0.55 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 9912 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.076925
+For: 0.6 0.65000004 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 3620 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.076925
+For: 0.6 0.65000004 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 2678 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.075075
+For: 0.6 0.75000006 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 2621 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.079125 CURRENT BEST 0.076925
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.079125 CURRENT BEST 0.076925
+MAX 0.076925 [0.073448,0.080402]
+-----------
+11 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.070525
+For: 0.6 0.65000004 0.70000005 0.75000006 0.95 0.5 
+Sampling: 40000 samples in 10885 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.073975
+For: 0.6 0.65000004 0.70000005 0.75000006 0.95 0.6 
+Sampling: 40000 samples in 3952 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.071550
+For: 0.6 0.65000004 0.70000005 0.75000006 1.0 0.5 
+Sampling: 40000 samples in 3000 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.073975
+For: 0.6 0.65000004 0.70000005 0.75000006 1.0 0.6 
+Sampling: 40000 samples in 2940 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.077475
+For: 0.6 0.65000004 0.70000005 0.8500001 0.95 0.5 
+Sampling: 40000 samples in 1979 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.079775
+For: 0.6 0.65000004 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 2040 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.079700
+For: 0.6 0.65000004 0.70000005 0.8500001 1.0 0.5 
+Sampling: 40000 samples in 1919 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.082225
+For: 0.6 0.65000004 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 1930 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.082225 [0.078687,0.085763]
+-----------
+12 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.082000
+For: 0.6 0.65000004 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 11210 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.082675
+For: 0.6 0.65000004 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 4272 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.082675 [0.079128,0.086222]
+-----------
+13 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.084700
+For: 0.55 0.6 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 11539 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.082325
+For: 0.55 0.70000005 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 4597 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.083425
+For: 0.65000004 0.6 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 3323 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.081925
+For: 0.65000004 0.70000005 0.70000005 0.8500001 0.95 0.6 
+Sampling: 40000 samples in 3271 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.085625
+For: 0.55 0.6 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 2327 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.083125
+For: 0.55 0.70000005 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 2375 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.084775
+For: 0.65000004 0.6 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 2237 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.083375
+For: 0.65000004 0.70000005 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 2253 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.085625 [0.082021,0.089229]
+-----------
+14 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.081500
+For: 0.5 0.6 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 11870 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.081225
+For: 0.6 0.6 0.70000005 0.8500001 1.0 0.6 
+Sampling: 40000 samples in 4962 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 40960 start 0 samples 40000
+new gw 40000 current max 0.082675
+-----------
+15 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.077875
+For: 0.55 0.6 0.70000005 0.8000001 1.0 0.55 
+Sampling: 40000 samples in 12564 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.081375
+For: 0.55 0.6 0.70000005 0.8000001 1.0 0.65000004 
+Sampling: 40000 samples in 5311 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.085400
+For: 0.55 0.6 0.70000005 0.9000001 1.0 0.55 
+Sampling: 40000 samples in 3700 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.090250
+For: 0.55 0.6 0.70000005 0.9000001 1.0 0.65000004 
+Sampling: 40000 samples in 3613 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.093850 CURRENT BEST 0.090250
+MAX 0.090250 [0.086494,0.094006]
+-----------
+16 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.093700
+For: 0.5 0.6 0.70000005 0.9500001 1.0 0.70000005 
+Sampling: 40000 samples in 13213 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.094075
+For: 0.6 0.6 0.70000005 0.9500001 1.0 0.70000005 
+Sampling: 40000 samples in 5648 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.092525 CURRENT BEST 0.094075
+MAX 0.094075 [0.090315,0.097835]
+-----------
+17 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.088400
+For: 0.6 0.6 0.70000005 0.9000001 1.0 0.70000005 
+Sampling: 40000 samples in 13884 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.096600
+For: 0.6 0.6 0.70000005 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 5978 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.096600 [0.092795,0.100405]
+-----------
+18 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.099375
+For: 0.6 0.5 0.65000004 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 14203 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.098650
+For: 0.6 0.6 0.65000004 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 6295 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.098650
+For: 0.6 0.6 0.65000004 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 4035 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.096875
+For: 0.6 0.70000005 0.65000004 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 3942 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.096575
+For: 0.6 0.5 0.75000006 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 2654 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.094050
+For: 0.6 0.6 0.75000006 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 2714 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.094050
+For: 0.6 0.6 0.75000006 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 2556 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.092375
+For: 0.6 0.70000005 0.75000006 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 2583 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.101550 CURRENT BEST 0.099375
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.104800 CURRENT BEST 0.099375
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.107225 CURRENT BEST 0.099375
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.109250 CURRENT BEST 0.099375
+MAX 0.099375 [0.095357,0.103393]
+-----------
+19 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.108075
+For: 0.6 0.049999963 0.45 1.0 0.95 0.70000005 
+Sampling: 40000 samples in 15857 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.107050
+For: 0.6 0.14999996 0.45 1.0 0.95 0.70000005 
+Sampling: 40000 samples in 6631 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.109050
+For: 0.6 0.049999963 0.45 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 4358 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.107800
+For: 0.6 0.14999996 0.45 1.0 1.0 0.70000005 
+Sampling: 40000 samples in 4294 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.109050 [0.105035,0.113065]
+-----------
+20 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.107275
+For: 0.6 0.049999963 0.45 1.0 1.0 0.65000004 
+Sampling: 40000 samples in 16178 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.112125
+For: 0.6 0.049999963 0.45 1.0 1.0 0.75000006 
+Sampling: 40000 samples in 6955 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.114700 CURRENT BEST 0.112125
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.115500 CURRENT BEST 0.112125
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.117500 CURRENT BEST 0.112125
+READ: buffer 0 size 40960 start 0 samples 40000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.118825 CURRENT BEST 0.112125
+MAX 0.112125 [0.107957,0.116293]
+-----------
+21 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.114825
+For: 0.55 0.049999963 0.45 0.95 1.0 0.9500001 
+Sampling: 40000 samples in 17781 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.118225
+For: 0.55 0.049999963 0.45 1.0 1.0 0.9500001 
+Sampling: 40000 samples in 7279 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.114575
+For: 0.65000004 0.049999963 0.45 0.95 1.0 0.9500001 
+Sampling: 40000 samples in 4682 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.117750
+For: 0.65000004 0.049999963 0.45 1.0 1.0 0.9500001 
+Sampling: 40000 samples in 4605 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.118225 [0.114067,0.122383]
+-----------
+22 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.115725
+For: 0.5 0.049999963 0.45 1.0 1.0 0.8500001 
+Sampling: 40000 samples in 18111 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.117400
+For: 0.6 0.049999963 0.45 1.0 1.0 0.8500001 
+Sampling: 40000 samples in 7625 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120400
+For: 0.5 0.049999963 0.45 1.0 1.0 0.95 
+Sampling: 40000 samples in 4995 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121675
+For: 0.6 0.049999963 0.45 1.0 1.0 0.95 
+Sampling: 40000 samples in 4921 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120400
+For: 0.5 0.049999963 0.45 1.0 1.0 0.9500001 
+Sampling: 40000 samples in 2973 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121675
+For: 0.6 0.049999963 0.45 1.0 1.0 0.9500001 
+Sampling: 40000 samples in 3023 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121400
+For: 0.5 0.049999963 0.45 1.0 1.0 1.0 
+Sampling: 40000 samples in 2885 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122525
+For: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+Sampling: 40000 samples in 2955 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.122525 [0.118302,0.126748]
+-----------
+23 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.116600
+For: 0.6 0.049999963 0.39999998 0.95 1.0 1.0 
+Sampling: 40000 samples in 18424 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.112775
+For: 0.6 0.049999963 0.5 0.95 1.0 1.0 
+Sampling: 40000 samples in 7946 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122125
+For: 0.6 0.049999963 0.39999998 1.0 1.0 1.0 
+Sampling: 40000 samples in 5322 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120025
+For: 0.6 0.049999963 0.5 1.0 1.0 1.0 
+Sampling: 40000 samples in 5228 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 40960 start 0 samples 40000
+new gw 40000 current max 0.122200
+-----------
+24 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 40960 start 0 samples 40000
+READ: buffer 0 size 40960 start 0 samples 40000
+Result: 0.116000
+For: 0.6 0.049999963 0.45 0.95 1.0 1.0 
+Sampling: 40000 samples in 19062 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122200
+For: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+Sampling: 40000 samples in 8258 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 44032 start 0 samples 44000
+new gw 44000 current max 0.117841
+-----------
+25 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.111841
+For: 0.6 0.049999963 0.45 0.95 1.0 1.0 
+Sampling: 44000 samples in 19766 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.117841
+For: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+Sampling: 44000 samples in 8599 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 44032 start 0 samples 44000
+new gw 44000 current max 0.117273
+-----------
+26 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.117841
+For: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+Sampling: 44000 samples in 20465 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.117000
+For: 0.6 0.099999964 0.39999998 1.0 1.0 1.0 
+Sampling: 44000 samples in 8939 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.116523
+For: 0.6 0.0 0.5 1.0 1.0 1.0 
+Sampling: 44000 samples in 5674 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.116091
+For: 0.6 0.099999964 0.5 1.0 1.0 1.0 
+Sampling: 44000 samples in 5567 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.117841 [0.113882,0.121800]
+-----------
+27 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.116273
+For: 0.6 0.0 0.39999998 0.95 1.0 1.0 
+Sampling: 44000 samples in 20825 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121568
+For: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+Sampling: 44000 samples in 9289 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.121568 [0.117555,0.125581]
+-----------
+28 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.123614
+For: 0.6 0.0 0.29999995 1.0 1.0 1.0 
+Sampling: 44000 samples in 21167 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120977
+For: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+Sampling: 44000 samples in 9647 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120977
+For: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+Sampling: 44000 samples in 6073 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.119750
+For: 0.6 0.0 0.5 1.0 1.0 1.0 
+Sampling: 44000 samples in 5933 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.124023 CURRENT BEST 0.123614
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.124955 CURRENT BEST 0.123614
+MAX 0.123614 [0.119553,0.127674]
+-----------
+29 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.124705
+For: 0.55 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 22334 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124795
+For: 0.65000004 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 10051 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.124136 CURRENT BEST 0.124795
+MAX 0.124795 [0.120737,0.128854]
+-----------
+30 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.123795
+For: 0.65000004 0.0 0.049999963 1.0 1.0 1.0 
+Sampling: 44000 samples in 23026 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124205
+For: 0.65000004 0.05 0.049999963 1.0 1.0 1.0 
+Sampling: 44000 samples in 10400 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123318
+For: 0.65000004 0.0 0.14999996 1.0 1.0 1.0 
+Sampling: 44000 samples in 6417 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122864
+For: 0.65000004 0.05 0.14999996 1.0 1.0 1.0 
+Sampling: 44000 samples in 6281 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 44032 start 0 samples 44000
+new gw 44000 current max 0.125068
+-----------
+31 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.124591
+For: 0.6 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 23718 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125636
+For: 0.70000005 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 10745 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126114 CURRENT BEST 0.125636
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126159 CURRENT BEST 0.125636
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126591 CURRENT BEST 0.125636
+READ: buffer 0 size 44032 start 0 samples 44000
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.125182 CURRENT BEST 0.125636
+MAX 0.125636 [0.121553,0.129720]
+-----------
+32 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.124432
+For: 0.8000001 0.0 0.099999964 1.0 1.0 0.95 
+Sampling: 44000 samples in 25451 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126159
+For: 0.8000001 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 11097 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123659
+For: 0.9000001 0.0 0.099999964 1.0 1.0 0.95 
+Sampling: 44000 samples in 6769 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125182
+For: 0.9000001 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 6629 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.126159 [0.122082,0.130236]
+-----------
+33 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.129023
+For: 0.8000001 0.0 0.049999963 1.0 1.0 1.0 
+Sampling: 44000 samples in 25804 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127636
+For: 0.8000001 0.0 0.14999996 1.0 1.0 1.0 
+Sampling: 44000 samples in 11437 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.129023 [0.124906,0.133139]
+-----------
+34 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.126455
+For: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+Sampling: 44000 samples in 26139 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126432
+For: 0.8500001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 44000 samples in 11785 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127023
+For: 0.75000006 0.0 0.049999963 1.0 1.0 1.0 
+Sampling: 44000 samples in 7112 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127114
+For: 0.8500001 0.0 0.049999963 1.0 1.0 1.0 
+Sampling: 44000 samples in 6973 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127023
+For: 0.75000006 0.0 0.05 1.0 1.0 1.0 
+Sampling: 44000 samples in 3314 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127114
+For: 0.8500001 0.0 0.05 1.0 1.0 1.0 
+Sampling: 44000 samples in 3373 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125273
+For: 0.75000006 0.0 0.14999996 1.0 1.0 1.0 
+Sampling: 44000 samples in 3230 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125614
+For: 0.8500001 0.0 0.14999996 1.0 1.0 1.0 
+Sampling: 44000 samples in 3296 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 44032 start 0 samples 44000
+new gw 44000 current max 0.125750
+-----------
+35 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.126795
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 44000 samples in 26832 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126545
+For: 0.8000001 0.0 0.099999964 1.0 1.0 1.0 
+Sampling: 44000 samples in 12121 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.126795 [0.122709,0.130882]
+-----------
+36 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.116295
+For: 0.8000001 0.0 0.0 0.95 0.95 1.0 
+Sampling: 44000 samples in 27186 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.117273
+For: 0.8000001 0.0 0.0 0.95 1.0 1.0 
+Sampling: 44000 samples in 12464 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.116295
+For: 0.8000001 0.0 0.05 0.95 0.95 1.0 
+Sampling: 44000 samples in 7499 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.118409
+For: 0.8000001 0.0 0.05 0.95 1.0 1.0 
+Sampling: 44000 samples in 7321 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122818
+For: 0.8000001 0.0 0.0 1.0 0.95 1.0 
+Sampling: 44000 samples in 3662 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125136
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 44000 samples in 3714 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124114
+For: 0.8000001 0.0 0.05 1.0 0.95 1.0 
+Sampling: 44000 samples in 3584 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125591
+For: 0.8000001 0.0 0.05 1.0 1.0 1.0 
+Sampling: 44000 samples in 3641 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 44032 start 0 samples 44000
+new gw 44000 current max 0.127545
+-----------
+37 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+READ: buffer 0 size 44032 start 0 samples 44000
+Result: 0.119909
+For: 0.8000001 0.0 0.0 0.95 0.95 0.95 
+Sampling: 44000 samples in 27869 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121477
+For: 0.8000001 0.0 0.0 0.95 0.95 1.0 
+Sampling: 44000 samples in 12807 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121955
+For: 0.8000001 0.0 0.0 0.95 1.0 0.95 
+Sampling: 44000 samples in 7869 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123432
+For: 0.8000001 0.0 0.0 0.95 1.0 1.0 
+Sampling: 44000 samples in 7665 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125159
+For: 0.8000001 0.0 0.0 1.0 0.95 0.95 
+Sampling: 44000 samples in 4007 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125273
+For: 0.8000001 0.0 0.0 1.0 0.95 1.0 
+Sampling: 44000 samples in 4071 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126682
+For: 0.8000001 0.0 0.0 1.0 1.0 0.95 
+Sampling: 44000 samples in 3944 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127545
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 44000 samples in 3991 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 49152 start 0 samples 48400
+new gw 48400 current max 0.123946
+-----------
+38 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.123946
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 28620 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123079
+For: 0.8000001 0.0 0.05 1.0 1.0 1.0 
+Sampling: 48400 samples in 13187 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 49152 start 0 samples 48400
+new gw 48400 current max 0.124339
+-----------
+39 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.118017
+For: 0.75000006 0.0 0.0 0.95 1.0 0.95 
+Sampling: 48400 samples in 29386 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122769
+For: 0.75000006 0.0 0.0 1.0 1.0 0.95 
+Sampling: 48400 samples in 13571 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.119607
+For: 0.75000006 0.0 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 8246 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125000
+For: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 8039 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.119545
+For: 0.8500001 0.0 0.0 0.95 1.0 0.95 
+Sampling: 48400 samples in 4386 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122893
+For: 0.8500001 0.0 0.0 1.0 1.0 0.95 
+Sampling: 48400 samples in 4451 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121012
+For: 0.8500001 0.0 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 4331 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124814
+For: 0.8500001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 4368 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125000 [0.121128,0.128872]
+-----------
+40 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.118822
+For: 0.75000006 0.0 0.0 0.95 0.95 1.0 
+Sampling: 48400 samples in 29764 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122335
+For: 0.75000006 0.0 0.0 1.0 0.95 1.0 
+Sampling: 48400 samples in 13956 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121095
+For: 0.75000006 0.0 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 8622 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125537
+For: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 8420 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125537 [0.121658,0.129417]
+-----------
+41 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.120723
+For: 0.75000006 0.0 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 30142 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125393
+For: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 14331 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 49152 start 0 samples 48400
+new gw 48400 current max 0.124938
+-----------
+42 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.124690
+For: 0.70000005 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 30888 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124690
+For: 0.70000005 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 14703 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125640
+For: 0.70000005 0.05 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 8997 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126033
+For: 0.70000005 0.1 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 8796 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124855
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 4762 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124855
+For: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 4823 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125186
+For: 0.8000001 0.05 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 4768 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125434
+For: 0.8000001 0.1 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 4993 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 49152 start 0 samples 48400
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126426 CURRENT BEST 0.126033
+READ: buffer 0 size 49152 start 0 samples 48400
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.125579 CURRENT BEST 0.126033
+MAX 0.126033 [0.122142,0.129924]
+-----------
+43 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.119483
+For: 0.65000004 0.2 0.0 0.95 1.0 0.95 
+Sampling: 48400 samples in 32826 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.120744
+For: 0.65000004 0.2 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 15403 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124174
+For: 0.65000004 0.2 0.0 1.0 1.0 0.95 
+Sampling: 48400 samples in 9624 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126426
+For: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 9236 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.126426 [0.122535,0.130317]
+-----------
+44 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.122149
+For: 0.65000004 0.2 0.0 1.0 0.95 1.0 
+Sampling: 48400 samples in 33207 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123719
+For: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 15813 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 49152 start 0 samples 48400
+new gw 48400 current max 0.123946
+-----------
+45 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.114050
+For: 0.65000004 0.2 0.0 0.9 1.0 1.0 
+Sampling: 48400 samples in 34187 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.119008
+For: 0.65000004 0.2 0.0 0.95 1.0 1.0 
+Sampling: 48400 samples in 16421 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123946
+For: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 10032 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123946
+For: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+Sampling: 48400 samples in 9709 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.114649
+For: 0.65000004 0.2 0.05 0.9 1.0 1.0 
+Sampling: 48400 samples in 5236 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.119814
+For: 0.65000004 0.2 0.05 0.95 1.0 1.0 
+Sampling: 48400 samples in 5381 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124587
+For: 0.65000004 0.2 0.05 1.0 1.0 1.0 
+Sampling: 48400 samples in 5387 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124587
+For: 0.65000004 0.2 0.05 1.0 1.0 1.0 
+Sampling: 48400 samples in 5411 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 49152 start 0 samples 48400
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.125062 CURRENT BEST 0.124587
+READ: buffer 0 size 49152 start 0 samples 48400
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.124835 CURRENT BEST 0.124587
+MAX 0.124587 [0.120714,0.128460]
+-----------
+46 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.119876
+For: 0.6 0.2 0.1 0.95 1.0 1.0 
+Sampling: 48400 samples in 35465 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.118864
+For: 0.70000005 0.2 0.1 0.95 1.0 1.0 
+Sampling: 48400 samples in 16808 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125186
+For: 0.6 0.2 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 10426 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124463
+For: 0.70000005 0.2 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 10099 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125186 [0.121311,0.129061]
+-----------
+47 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.125351
+For: 0.6 0.10000001 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 35850 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126219
+For: 0.6 0.2 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 17286 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126219
+For: 0.6 0.2 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 11086 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126260
+For: 0.6 0.3 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 10757 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 49152 start 0 samples 48400
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.124711 CURRENT BEST 0.126260
+MAX 0.126260 [0.122371,0.130149]
+-----------
+48 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.123595
+For: 0.6 0.3 0.1 1.0 0.95 1.0 
+Sampling: 48400 samples in 37161 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125558
+For: 0.6 0.3 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 17935 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 49152 start 0 samples 48400
+new gw 48400 current max 0.123926
+-----------
+49 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+READ: buffer 0 size 49152 start 0 samples 48400
+Result: 0.112066
+For: 0.6 0.3 0.1 0.9 1.0 1.0 
+Sampling: 48400 samples in 38140 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.116550
+For: 0.6 0.3 0.1 0.95 1.0 1.0 
+Sampling: 48400 samples in 18320 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123926
+For: 0.6 0.3 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 11526 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123926
+For: 0.6 0.3 0.1 1.0 1.0 1.0 
+Sampling: 48400 samples in 11138 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.126352
+-----------
+50 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.127385
+For: 0.6 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 39450 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126258
+For: 0.6 0.3 0.05000001 1.0 1.0 1.0 
+Sampling: 53240 samples in 18768 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126258
+For: 0.6 0.3 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 11960 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124042
+For: 0.6 0.3 0.15 1.0 1.0 1.0 
+Sampling: 53240 samples in 11576 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126258
+For: 0.6 0.3 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 5672 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124042
+For: 0.6 0.3 0.15 1.0 1.0 1.0 
+Sampling: 53240 samples in 5818 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124042
+For: 0.6 0.3 0.15 1.0 1.0 1.0 
+Sampling: 53240 samples in 5806 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124718
+For: 0.6 0.3 0.25 1.0 1.0 1.0 
+Sampling: 53240 samples in 5845 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.127385 [0.123663,0.131107]
+-----------
+51 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.126972
+For: 0.6 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 39863 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126484
+For: 0.6 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 19197 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126484
+For: 0.6 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 12382 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125676
+For: 0.6 0.40000004 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 11985 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.124080
+-----------
+52 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.121225
+For: 0.6 0.25 0.0 1.0 0.95 0.95 
+Sampling: 53240 samples in 40714 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123497
+For: 0.6 0.25 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 19644 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123760
+For: 0.6 0.25 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 12798 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124080
+For: 0.6 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 12404 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122070
+For: 0.6 0.35000002 0.0 1.0 0.95 0.95 
+Sampling: 53240 samples in 6093 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124493
+For: 0.6 0.35000002 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 6238 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124230
+For: 0.6 0.35000002 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 6225 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124606
+For: 0.6 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 6259 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.124606 [0.120919,0.128293]
+-----------
+53 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.121168
+For: 0.55 0.35000002 0.0 0.95 1.0 1.0 
+Sampling: 53240 samples in 41130 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121150
+For: 0.65000004 0.35000002 0.0 0.95 1.0 1.0 
+Sampling: 53240 samples in 20060 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127423
+For: 0.55 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 13210 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126728
+For: 0.65000004 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 12811 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.127423 [0.123701,0.131145]
+-----------
+54 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.125808
+For: 0.55 0.35000002 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 41550 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122070
+For: 0.55 0.35000002 0.05 1.0 1.0 0.95 
+Sampling: 53240 samples in 20485 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125676
+For: 0.55 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 13625 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122671
+For: 0.55 0.35000002 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 13232 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.125376
+-----------
+55 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.123065
+For: 0.55 0.3 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 42399 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125620
+For: 0.55 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 20900 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122314
+For: 0.55 0.40000004 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 14044 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124906
+For: 0.55 0.40000004 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 13663 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125620 [0.121920,0.129320]
+-----------
+56 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.125169
+For: 0.55 0.3 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 42812 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126221
+For: 0.55 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 21326 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.126221 [0.122513,0.129928]
+-----------
+57 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.122577
+For: 0.5 0.3 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 43228 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124981
+For: 0.5 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 21736 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123197
+For: 0.6 0.3 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 14460 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125939
+For: 0.6 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 14079 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.124098
+-----------
+58 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.123422
+For: 0.5 0.25 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 44056 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124493
+For: 0.5 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 22152 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124249
+For: 0.6 0.25 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 14872 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125338
+For: 0.6 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 14492 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123497
+For: 0.5 0.35000002 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 6502 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125169
+For: 0.5 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 6651 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123422
+For: 0.6 0.35000002 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 6644 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125338
+For: 0.6 0.35000002 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 6672 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125338 [0.121642,0.129034]
+-----------
+59 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.121469
+For: 0.55 0.25 0.0 1.0 1.0 0.9 
+Sampling: 53240 samples in 44471 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122934
+For: 0.55 0.25 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 22572 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121394
+For: 0.65000004 0.25 0.0 1.0 1.0 0.9 
+Sampling: 53240 samples in 15294 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122615
+For: 0.65000004 0.25 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 14904 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125188
+For: 0.55 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 6915 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125188
+For: 0.55 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7072 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123854
+For: 0.65000004 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7058 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123854
+For: 0.65000004 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7090 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.123103
+-----------
+60 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.122446
+For: 0.6 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 45288 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123760
+For: 0.6 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 22983 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121018
+For: 0.6 0.3 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 15715 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.122502
+For: 0.6 0.3 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 15321 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.123760 [0.120084,0.127437]
+-----------
+61 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.125620
+For: 0.5 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 45699 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124869
+For: 0.6 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 23400 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127292
+For: 0.5 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 16122 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126897
+For: 0.6 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 15733 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124869
+For: 0.6 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 7352 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125094
+For: 0.70000005 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 7525 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126897
+For: 0.6 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7487 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127141
+For: 0.70000005 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7500 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.127292 [0.123571,0.131012]
+-----------
+62 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.125338
+For: 0.45 0.15 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 46113 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126521
+For: 0.45 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 23860 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124981
+For: 0.45 0.25 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 16545 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126521
+For: 0.45 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 16162 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123986
+For: 0.55 0.15 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 7768 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125338
+For: 0.55 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7952 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123817
+For: 0.55 0.25 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 7900 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125319
+For: 0.55 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 7913 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.125301
+-----------
+63 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.125319
+For: 0.45 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 46948 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125488
+For: 0.55 0.2 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 24281 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125789
+For: 0.45 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 16962 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125357
+For: 0.55 0.2 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 16584 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.125789 [0.122087,0.129491]
+-----------
+64 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.126521
+For: 0.39999998 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 47355 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127367
+For: 0.5 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 24695 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126427
+For: 0.39999998 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 17371 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127141
+For: 0.5 0.25 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 16995 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 53248 start 0 samples 53240
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.128512 CURRENT BEST 0.127367
+READ: buffer 0 size 53248 start 0 samples 53240
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.127648 CURRENT BEST 0.127367
+MAX 0.127367 [0.123631,0.131103]
+-----------
+65 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.123986
+For: 0.5 0.10000001 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 48588 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127667
+For: 0.5 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 25110 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123986
+For: 0.6 0.10000001 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 17789 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127742
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 17403 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.127742 [0.124016,0.131469]
+-----------
+66 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.122558
+For: 0.6 0.10000001 0.0 1.0 1.0 0.9 
+Sampling: 53240 samples in 49005 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.123704
+For: 0.6 0.10000001 0.05 1.0 1.0 0.9 
+Sampling: 53240 samples in 25527 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124925
+For: 0.6 0.10000001 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 18211 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125263
+For: 0.6 0.10000001 0.05 1.0 1.0 0.95 
+Sampling: 53240 samples in 17828 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126146
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 8181 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126878
+For: 0.6 0.10000001 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 8367 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126146
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 8307 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126878
+For: 0.6 0.10000001 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 8357 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.127761
+-----------
+67 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.128268
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 49944 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126878
+For: 0.6 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 25981 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+READ: buffer 0 size 53248 start 0 samples 53240
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126991 CURRENT BEST 0.128268
+MAX 0.128268 [0.124535,0.132001]
+-----------
+68 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.124530
+For: 0.6 7.4505806E-9 0.0 1.0 0.9 1.0 
+Sampling: 53240 samples in 50852 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125582
+For: 0.6 7.4505806E-9 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 26408 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126991
+For: 0.6 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 18627 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126991
+For: 0.6 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 18240 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.124737
+For: 0.6 0.10000001 0.0 1.0 0.9 1.0 
+Sampling: 53240 samples in 8606 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125582
+For: 0.6 0.10000001 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 8773 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126972
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 8715 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126972
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 8770 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.126690
+-----------
+69 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.126653
+For: 0.6 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 51690 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126578
+For: 0.6 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 26820 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127198
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 19038 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.126822
+For: 0.6 0.10000001 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 18678 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.127198 [0.123478,0.130917]
+-----------
+70 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.123760
+For: 0.6 0.10000001 0.0 1.0 0.95 0.9 
+Sampling: 53240 samples in 52104 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125958
+For: 0.6 0.10000001 0.0 1.0 0.95 0.95 
+Sampling: 53240 samples in 27245 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.129358
+For: 0.6 0.10000001 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 19457 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.129358
+For: 0.6 0.10000001 0.0 1.0 0.95 1.0 
+Sampling: 53240 samples in 19097 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125244
+For: 0.6 0.10000001 0.0 1.0 1.0 0.9 
+Sampling: 53240 samples in 9025 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127949
+For: 0.6 0.10000001 0.0 1.0 1.0 0.95 
+Sampling: 53240 samples in 9185 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.130654
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 9122 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.130654
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 9187 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+MAX 0.130654 [0.126891,0.134416]
+-----------
+71 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.121675
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 53240 samples in 52524 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.121300
+For: 0.6 0.15 0.0 0.95 1.0 1.0 
+Sampling: 53240 samples in 27658 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125563
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 19870 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.125357
+For: 0.6 0.15 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 19505 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 53248 start 0 samples 53240
+new gw 53240 current max 0.128137
+-----------
+72 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 53248 start 0 samples 53240
+READ: buffer 0 size 53248 start 0 samples 53240
+Result: 0.128137
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 53240 samples in 53350 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+Result: 0.127404
+For: 0.6 0.10000001 0.05 1.0 1.0 1.0 
+Sampling: 53240 samples in 28069 miliseconds.
+Path length: min 0, max 299, avg 299.000000
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 59392 start 0 samples 58564
+new gw 58564 current max 0.125948
+-----------
+73 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.125709
+For: 0.6 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 54245 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.125948
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 28523 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.125948
+For: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 20357 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.125589
+For: 0.6 0.2 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 19959 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 59392 start 0 samples 58564
+new gw 58564 current max 0.125316
+-----------
+74 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.119920
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 58564 samples in 55145 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.125521
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 28977 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.119152
+For: 0.6 0.15 0.0 0.95 1.0 1.0 
+Sampling: 58564 samples in 20810 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.124445
+For: 0.6 0.15 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 20548 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+MAX 0.125521 [0.121994,0.129047]
+-----------
+75 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.126033
+For: 0.55 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 55648 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.126562
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 29430 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+READ: buffer 0 size 59392 start 0 samples 58564
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126084 CURRENT BEST 0.126562
+MAX 0.126562 [0.123023,0.130101]
+-----------
+76 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.125231
+For: 0.65000004 7.4505806E-9 0.0 1.0 1.0 0.95 
+Sampling: 58564 samples in 56548 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.125896
+For: 0.65000004 0.10000001 0.0 1.0 1.0 0.95 
+Sampling: 58564 samples in 29888 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.126682
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 0.95 
+Sampling: 58564 samples in 21269 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.126375
+For: 0.65000004 0.10000001 0.05 1.0 1.0 0.95 
+Sampling: 58564 samples in 21005 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.126340
+For: 0.65000004 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 9478 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.127058
+For: 0.65000004 0.10000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 9638 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.127826
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 58564 samples in 9576 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.127297
+For: 0.65000004 0.10000001 0.05 1.0 1.0 1.0 
+Sampling: 58564 samples in 9641 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+MAX 0.127826 [0.124272,0.131380]
+-----------
+77 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.109743
+For: 0.65000004 7.4505806E-9 0.05 0.9 1.0 0.95 
+Sampling: 58564 samples in 57011 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.116761
+For: 0.65000004 7.4505806E-9 0.05 0.95 1.0 0.95 
+Sampling: 58564 samples in 30348 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.111058
+For: 0.65000004 7.4505806E-9 0.05 0.9 1.0 1.0 
+Sampling: 58564 samples in 21732 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.117205
+For: 0.65000004 7.4505806E-9 0.05 0.95 1.0 1.0 
+Sampling: 58564 samples in 21460 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.120928
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 0.95 
+Sampling: 58564 samples in 9940 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.120928
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 0.95 
+Sampling: 58564 samples in 10098 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.122345
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 58564 samples in 10027 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.122345
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 58564 samples in 10091 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 59392 start 0 samples 58564
+new gw 58564 current max 0.127177
+-----------
+78 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+READ: buffer 0 size 59392 start 0 samples 58564
+Result: 0.126426
+For: 0.65000004 0.0 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 57918 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.126579
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 58564 samples in 30793 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.124189
+For: 0.65000004 0.0 0.1 1.0 1.0 1.0 
+Sampling: 58564 samples in 22181 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+Result: 0.123984
+For: 0.65000004 0.05000001 0.1 1.0 1.0 1.0 
+Sampling: 58564 samples in 21911 miliseconds.
+Path length: min 0, max 299, avg 299.041870
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 64512 start 0 samples 64420
+new gw 64420 current max 0.128345
+-----------
+79 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+Result: 0.127724
+For: 0.65000004 7.4505806E-9 0.0 1.0 1.0 1.0 
+Sampling: 64420 samples in 58912 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.128345
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 31320 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.128345
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 22676 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.127585
+For: 0.65000004 7.4505806E-9 0.15 1.0 1.0 1.0 
+Sampling: 64420 samples in 22411 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 64512 start 0 samples 64420
+new gw 64420 current max 0.126001
+-----------
+80 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+READ: buffer 0 size 64512 start 0 samples 64420
+Result: 0.120211
+For: 0.6 0.0 0.05 0.95 1.0 1.0 
+Sampling: 64420 samples in 59914 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.120459
+For: 0.70000005 0.0 0.05 0.95 1.0 1.0 
+Sampling: 64420 samples in 31818 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.120708
+For: 0.6 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 64420 samples in 23177 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.120025
+For: 0.70000005 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 64420 samples in 22910 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.125768
+For: 0.6 0.0 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 10434 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.125458
+For: 0.70000005 0.0 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 10598 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.125722
+For: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 10526 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+Result: 0.125489
+For: 0.70000005 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 64420 samples in 10648 miliseconds.
+Path length: min 0, max 299, avg 299.128967
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 71680 start 0 samples 70862
+new gw 70862 current max 0.125258
+-----------
+81 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+Result: 0.122068
+For: 0.65000004 7.4505806E-9 0.05 1.0 0.95 0.95 
+Sampling: 70862 samples in 61007 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.124933
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 0.95 
+Sampling: 70862 samples in 32383 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.123155
+For: 0.65000004 7.4505806E-9 0.05 1.0 0.95 1.0 
+Sampling: 70862 samples in 23724 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.125258
+For: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 23458 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 71680 start 0 samples 70862
+new gw 70862 current max 0.124806
+-----------
+82 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+Result: 0.116776
+For: 0.65000004 0.0 0.05 0.95 1.0 0.95 
+Sampling: 70862 samples in 62112 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.117157
+For: 0.65000004 0.05000001 0.05 0.95 1.0 0.95 
+Sampling: 70862 samples in 32939 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.118272
+For: 0.65000004 0.0 0.05 0.95 1.0 1.0 
+Sampling: 70862 samples in 24270 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.118667
+For: 0.65000004 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 70862 samples in 24025 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.122139
+For: 0.65000004 0.0 0.05 1.0 1.0 0.95 
+Sampling: 70862 samples in 11033 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.122774
+For: 0.65000004 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 70862 samples in 11191 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.124806
+For: 0.65000004 0.0 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 11133 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.125314
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 11272 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+MAX 0.125314 [0.122110,0.128518]
+-----------
+83 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+Result: 0.119458
+For: 0.65000004 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 70862 samples in 62692 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.126923
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 33512 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+MAX 0.126923 [0.123702,0.130144]
+-----------
+84 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+Result: 0.125441
+For: 0.65000004 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 70862 samples in 63244 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.126429
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 34078 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 71680 start 0 samples 70862
+new gw 70862 current max 0.125737
+-----------
+85 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 71680 start 0 samples 70862
+READ: buffer 0 size 71680 start 0 samples 70862
+Result: 0.123451
+For: 0.65000004 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 70862 samples in 64347 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+Result: 0.125737
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 70862 samples in 34634 miliseconds.
+Path length: min 0, max 299, avg 299.208160
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 78848 start 0 samples 77948
+new gw 77948 current max 0.127085
+-----------
+86 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+Result: 0.120388
+For: 0.65000004 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 77948 samples in 65559 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.127085
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 77948 samples in 35244 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 78848 start 0 samples 77948
+new gw 77948 current max 0.125725
+-----------
+87 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+Result: 0.123364
+For: 0.65000004 0.05000001 0.0 1.0 0.95 0.95 
+Sampling: 77948 samples in 66767 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.125096
+For: 0.65000004 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 77948 samples in 35839 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.125237
+For: 0.65000004 0.05000001 0.0 1.0 1.0 0.95 
+Sampling: 77948 samples in 24872 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.126764
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 77948 samples in 24629 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.122646
+For: 0.65000004 0.05000001 0.1 1.0 0.95 0.95 
+Sampling: 77948 samples in 11639 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.125430
+For: 0.65000004 0.05000001 0.1 1.0 0.95 1.0 
+Sampling: 77948 samples in 11798 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.124583
+For: 0.65000004 0.05000001 0.1 1.0 1.0 0.95 
+Sampling: 77948 samples in 11746 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.126751
+For: 0.65000004 0.05000001 0.1 1.0 1.0 1.0 
+Sampling: 77948 samples in 11876 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+MAX 0.126764 [0.123694,0.129834]
+-----------
+88 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+Result: 0.120106
+For: 0.65000004 0.05000001 0.0 1.0 0.84999996 1.0 
+Sampling: 77948 samples in 67366 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.122120
+For: 0.65000004 0.05000001 0.0 1.0 0.9 1.0 
+Sampling: 77948 samples in 36443 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.124249
+For: 0.65000004 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 77948 samples in 25482 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.124249
+For: 0.65000004 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 77948 samples in 25226 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.124249
+For: 0.65000004 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 77948 samples in 12249 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.126418
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 77948 samples in 12395 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.126418
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 77948 samples in 12345 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.126418
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 77948 samples in 12523 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 78848 start 0 samples 77948
+new gw 77948 current max 0.126033
+-----------
+89 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 78848 start 0 samples 77948
+READ: buffer 0 size 78848 start 0 samples 77948
+Result: 0.126033
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 77948 samples in 68632 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+Result: 0.125661
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 77948 samples in 37050 miliseconds.
+Path length: min 0, max 299, avg 299.280121
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 86016 start 0 samples 85742
+new gw 85742 current max 0.125621
+-----------
+90 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.125621
+For: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 69953 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.127522
+For: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 37713 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+READ: buffer 0 size 86016 start 0 samples 85742
+ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY 0.126566 CURRENT BEST 0.127522
+MAX 0.127522 [0.124588,0.130456]
+-----------
+91 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.118682
+For: 0.6 0.05000001 0.05 0.95 1.0 0.95 
+Sampling: 85742 samples in 71289 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.119405
+For: 0.70000005 0.05000001 0.05 0.95 1.0 0.95 
+Sampling: 85742 samples in 38406 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.123942
+For: 0.6 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 85742 samples in 26145 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.124956
+For: 0.70000005 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 85742 samples in 25897 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.119743
+For: 0.6 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 85742 samples in 12917 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.120536
+For: 0.70000005 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 85742 samples in 13058 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125878
+For: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 13007 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.127126
+For: 0.70000005 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 13185 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 86016 start 0 samples 85742
+new gw 85742 current max 0.126834
+-----------
+92 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.125784
+For: 0.6 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 85742 samples in 72618 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126846
+For: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 39075 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125621
+For: 0.70000005 0.05000001 0.05 1.0 1.0 0.95 
+Sampling: 85742 samples in 26811 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126741
+For: 0.70000005 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 26558 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+MAX 0.126846 [0.123918,0.129773]
+-----------
+93 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.120699
+For: 0.6 0.05000001 0.05 0.95 1.0 1.0 
+Sampling: 85742 samples in 73285 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126974
+For: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+Sampling: 85742 samples in 39750 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+MAX 0.126974 [0.124045,0.129903]
+-----------
+94 ITERATION, 8 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.122752
+For: 0.6 0.05000001 0.0 1.0 0.95 0.95 
+Sampling: 85742 samples in 73962 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.121317
+For: 0.6 0.05000001 0.1 1.0 0.95 0.95 
+Sampling: 85742 samples in 40424 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.124152
+For: 0.6 0.05000001 0.0 1.0 1.0 0.95 
+Sampling: 85742 samples in 27472 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.123207
+For: 0.6 0.05000001 0.1 1.0 1.0 0.95 
+Sampling: 85742 samples in 27226 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.124420
+For: 0.6 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 85742 samples in 13580 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.122974
+For: 0.6 0.05000001 0.1 1.0 0.95 1.0 
+Sampling: 85742 samples in 13721 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126461
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 13666 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125376
+For: 0.6 0.05000001 0.1 1.0 1.0 1.0 
+Sampling: 85742 samples in 13846 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 86016 start 0 samples 85742
+new gw 85742 current max 0.125248
+-----------
+95 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.119731
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 85742 samples in 75290 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.119685
+For: 0.6 0.05000001 0.1 0.95 1.0 1.0 
+Sampling: 85742 samples in 41085 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125504
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 28129 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125691
+For: 0.6 0.05000001 0.1 1.0 1.0 1.0 
+Sampling: 85742 samples in 27893 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+MAX 0.125691 [0.122775,0.128607]
+-----------
+96 ITERATION, 4 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.126822
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 75944 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126076
+For: 0.6 0.05000001 0.10000001 1.0 1.0 1.0 
+Sampling: 85742 samples in 41744 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.126076
+For: 0.6 0.05000001 0.1 1.0 1.0 1.0 
+Sampling: 85742 samples in 28798 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125283
+For: 0.6 0.05000001 0.2 1.0 1.0 1.0 
+Sampling: 85742 samples in 28556 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+MAX 0.126822 [0.123895,0.129750]
+-----------
+97 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.120338
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 85742 samples in 76613 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.125831
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 42399 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 86016 start 0 samples 85742
+new gw 85742 current max 0.127231
+-----------
+98 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 86016 start 0 samples 85742
+READ: buffer 0 size 86016 start 0 samples 85742
+Result: 0.122087
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 85742 samples in 77941 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+Result: 0.127231
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 85742 samples in 43060 miliseconds.
+Path length: min 0, max 299, avg 299.345581
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 95232 start 0 samples 94316
+new gw 94316 current max 0.126935
+-----------
+99 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 95232 start 0 samples 94316
+READ: buffer 0 size 95232 start 0 samples 94316
+Result: 0.120966
+For: 0.6 0.05000001 0.0 0.95 1.0 1.0 
+Sampling: 94316 samples in 79402 miliseconds.
+Path length: min 0, max 299, avg 299.405060
+Result: 0.126935
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 94316 samples in 43779 miliseconds.
+Path length: min 0, max 299, avg 299.405060
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 95232 start 0 samples 94316
+new gw 94316 current max 0.126532
+-----------
+100 ITERATION, 2 COMBINATIONS
+READ: buffer 0 size 95232 start 0 samples 94316
+READ: buffer 0 size 95232 start 0 samples 94316
+Result: 0.124857
+For: 0.6 0.05000001 0.0 1.0 0.95 1.0 
+Sampling: 94316 samples in 80857 miliseconds.
+Path length: min 0, max 299, avg 299.405060
+Result: 0.126532
+For: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+Sampling: 94316 samples in 44513 miliseconds.
+Path length: min 0, max 299, avg 299.405060
+WARNING: iteration DOESN'T change anything, no improvement!
+READ: buffer 0 size 104448 start 0 samples 103747
+new gw 103747 current max 0.127011
+0: 0.050400 [0.047582,0.053218]  c_i: 0.6 0.45 0.5 0.5 0.5 0.5 
+1: new gw 40000 current max 0.047850 [0.045101,0.050599]  c_i: 0.6 0.45 0.5 0.5 0.5 0.5 
+2: 0.049200 [0.046414,0.051986]  c_i: 0.6 0.5 0.45 0.5 0.5 0.5 
+3: 0.049750 [0.046744,0.052756]  c_i: 0.6 0.5 0.45 0.5 0.8500001 0.5 
+4: 0.057725 [0.054721,0.060729]  c_i: 0.55 0.5 0.45 0.5 0.8500001 0.5 
+5: 0.059575 [0.056526,0.062624]  c_i: 0.6 0.45 0.45 0.5 0.9000001 0.5 
+6: 0.061625 [0.058290,0.064960]  c_i: 0.6 0.70000005 0.70000005 0.75000006 0.9000001 0.5 
+7: 0.075025 [0.071632,0.078418]  c_i: 0.6 0.65000004 0.70000005 0.75000006 0.9000001 0.55 
+8: new gw 40000 current max 0.072975 [0.069625,0.076325]  c_i: 0.6 0.65000004 0.70000005 0.75000006 0.9000001 0.55 
+9: 0.076125 [0.072709,0.079541]  c_i: 0.6 0.65000004 0.70000005 0.8000001 1.0 0.55 
+10: 0.076925 [0.073448,0.080402]  c_i: 0.6 0.65000004 0.70000005 0.8000001 1.0 0.55 
+11: 0.082225 [0.078687,0.085763]  c_i: 0.6 0.65000004 0.70000005 0.8500001 1.0 0.6 
+12: 0.082675 [0.079128,0.086222]  c_i: 0.6 0.65000004 0.70000005 0.8500001 1.0 0.6 
+13: 0.085625 [0.082021,0.089229]  c_i: 0.55 0.6 0.70000005 0.8500001 1.0 0.6 
+14: new gw 40000 current max 0.082675 [0.079128,0.086222]  c_i: 0.55 0.6 0.70000005 0.8500001 1.0 0.6 
+15: 0.090250 [0.086494,0.094006]  c_i: 0.55 0.6 0.70000005 0.9500001 1.0 0.70000005 
+16: 0.094075 [0.090315,0.097835]  c_i: 0.6 0.6 0.70000005 0.9500001 1.0 0.70000005 
+17: 0.096600 [0.092795,0.100405]  c_i: 0.6 0.6 0.70000005 1.0 1.0 0.70000005 
+18: 0.099375 [0.095357,0.103393]  c_i: 0.6 0.099999964 0.45 1.0 1.0 0.70000005 
+19: 0.109050 [0.105035,0.113065]  c_i: 0.6 0.049999963 0.45 1.0 1.0 0.70000005 
+20: 0.112125 [0.107957,0.116293]  c_i: 0.6 0.049999963 0.45 1.0 1.0 0.9500001 
+21: 0.118225 [0.114067,0.122383]  c_i: 0.55 0.049999963 0.45 1.0 1.0 0.9500001 
+22: 0.122525 [0.118302,0.126748]  c_i: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+23: new gw 40000 current max 0.122200 [0.117982,0.126418]  c_i: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+24: new gw 44000 current max 0.117841 [0.113688,0.121993]  c_i: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+25: new gw 44000 current max 0.117273 [0.113322,0.121224]  c_i: 0.6 0.049999963 0.45 1.0 1.0 1.0 
+26: 0.117841 [0.113882,0.121800]  c_i: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+27: 0.121568 [0.117555,0.125581]  c_i: 0.6 0.0 0.39999998 1.0 1.0 1.0 
+28: 0.123614 [0.119553,0.127674]  c_i: 0.6 0.0 0.099999964 1.0 1.0 1.0 
+29: 0.124795 [0.120737,0.128854]  c_i: 0.65000004 0.0 0.099999964 1.0 1.0 1.0 
+30: new gw 44000 current max 0.125068 [0.121006,0.129130]  c_i: 0.65000004 0.0 0.099999964 1.0 1.0 1.0 
+31: 0.125636 [0.121553,0.129720]  c_i: 0.8500001 0.0 0.099999964 1.0 1.0 1.0 
+32: 0.126159 [0.122082,0.130236]  c_i: 0.8000001 0.0 0.099999964 1.0 1.0 1.0 
+33: 0.129023 [0.124906,0.133139]  c_i: 0.8000001 0.0 0.049999963 1.0 1.0 1.0 
+34: new gw 44000 current max 0.125750 [0.121678,0.129822]  c_i: 0.8000001 0.0 0.049999963 1.0 1.0 1.0 
+35: 0.126795 [0.122709,0.130882]  c_i: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+36: new gw 44000 current max 0.127545 [0.123449,0.131642]  c_i: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+37: new gw 48400 current max 0.123946 [0.119900,0.127993]  c_i: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+38: new gw 48400 current max 0.124339 [0.120475,0.128202]  c_i: 0.8000001 0.0 0.0 1.0 1.0 1.0 
+39: 0.125000 [0.121128,0.128872]  c_i: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+40: 0.125537 [0.121658,0.129417]  c_i: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+41: new gw 48400 current max 0.124938 [0.121067,0.128809]  c_i: 0.75000006 0.0 0.0 1.0 1.0 1.0 
+42: 0.126033 [0.122142,0.129924]  c_i: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+43: 0.126426 [0.122535,0.130317]  c_i: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+44: new gw 48400 current max 0.123946 [0.120088,0.127804]  c_i: 0.65000004 0.2 0.0 1.0 1.0 1.0 
+45: 0.124587 [0.120714,0.128460]  c_i: 0.65000004 0.2 0.1 1.0 1.0 1.0 
+46: 0.125186 [0.121311,0.129061]  c_i: 0.6 0.2 0.1 1.0 1.0 1.0 
+47: 0.126260 [0.122371,0.130149]  c_i: 0.6 0.3 0.1 1.0 1.0 1.0 
+48: new gw 48400 current max 0.123926 [0.120068,0.127784]  c_i: 0.6 0.3 0.1 1.0 1.0 1.0 
+49: new gw 53240 current max 0.126352 [0.122462,0.130242]  c_i: 0.6 0.3 0.1 1.0 1.0 1.0 
+50: 0.127385 [0.123663,0.131107]  c_i: 0.6 0.3 0.0 1.0 1.0 1.0 
+51: new gw 53240 current max 0.124080 [0.120399,0.127760]  c_i: 0.6 0.3 0.0 1.0 1.0 1.0 
+52: 0.124606 [0.120919,0.128293]  c_i: 0.6 0.35000002 0.0 1.0 1.0 1.0 
+53: 0.127423 [0.123701,0.131145]  c_i: 0.55 0.35000002 0.0 1.0 1.0 1.0 
+54: new gw 53240 current max 0.125376 [0.121679,0.129072]  c_i: 0.55 0.35000002 0.0 1.0 1.0 1.0 
+55: 0.125620 [0.121920,0.129320]  c_i: 0.55 0.3 0.0 1.0 1.0 1.0 
+56: 0.126221 [0.122513,0.129928]  c_i: 0.55 0.3 0.0 1.0 1.0 1.0 
+57: new gw 53240 current max 0.124098 [0.120418,0.127779]  c_i: 0.55 0.3 0.0 1.0 1.0 1.0 
+58: 0.125338 [0.121642,0.129034]  c_i: 0.6 0.25 0.0 1.0 1.0 1.0 
+59: new gw 53240 current max 0.123103 [0.119435,0.126771]  c_i: 0.6 0.25 0.0 1.0 1.0 1.0 
+60: 0.123760 [0.120084,0.127437]  c_i: 0.6 0.2 0.0 1.0 1.0 1.0 
+61: 0.127292 [0.123571,0.131012]  c_i: 0.5 0.2 0.0 1.0 1.0 1.0 
+62: new gw 53240 current max 0.125301 [0.121605,0.128996]  c_i: 0.5 0.2 0.0 1.0 1.0 1.0 
+63: 0.125789 [0.122087,0.129491]  c_i: 0.45 0.2 0.0 1.0 1.0 1.0 
+64: 0.127367 [0.123631,0.131103]  c_i: 0.55 0.10000001 0.0 1.0 1.0 1.0 
+65: 0.127742 [0.124016,0.131469]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+66: new gw 53240 current max 0.127761 [0.124034,0.131488]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+67: 0.128268 [0.124535,0.132001]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+68: new gw 53240 current max 0.126690 [0.122977,0.130404]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+69: 0.127198 [0.123478,0.130917]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+70: 0.130654 [0.126891,0.134416]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+71: new gw 53240 current max 0.128137 [0.124405,0.131868]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+72: new gw 58564 current max 0.125948 [0.122244,0.129652]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+73: new gw 58564 current max 0.125316 [0.121792,0.128840]  c_i: 0.6 0.10000001 0.0 1.0 1.0 1.0 
+74: 0.125521 [0.121994,0.129047]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+75: 0.126562 [0.123023,0.130101]  c_i: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+76: 0.127826 [0.124272,0.131380]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+77: new gw 58564 current max 0.127177 [0.123631,0.130723]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+78: new gw 64420 current max 0.128345 [0.124785,0.131905]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+79: new gw 64420 current max 0.126001 [0.122633,0.129369]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+80: new gw 70862 current max 0.125258 [0.121898,0.128617]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+81: new gw 70862 current max 0.124806 [0.121608,0.128004]  c_i: 0.65000004 7.4505806E-9 0.05 1.0 1.0 1.0 
+82: 0.125314 [0.122110,0.128518]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+83: 0.126923 [0.123702,0.130144]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+84: new gw 70862 current max 0.125737 [0.122529,0.128946]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+85: new gw 77948 current max 0.127085 [0.123862,0.130308]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+86: new gw 77948 current max 0.125725 [0.122666,0.128784]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+87: 0.126764 [0.123694,0.129834]  c_i: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+88: new gw 77948 current max 0.126033 [0.122971,0.129095]  c_i: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+89: new gw 85742 current max 0.125621 [0.122563,0.128679]  c_i: 0.65000004 0.05000001 0.0 1.0 1.0 1.0 
+90: 0.127522 [0.124588,0.130456]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+91: new gw 85742 current max 0.126834 [0.123907,0.129761]  c_i: 0.65000004 0.05000001 0.05 1.0 1.0 1.0 
+92: 0.126846 [0.123918,0.129773]  c_i: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+93: 0.126974 [0.124045,0.129903]  c_i: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+94: new gw 85742 current max 0.125248 [0.122336,0.128160]  c_i: 0.6 0.05000001 0.05 1.0 1.0 1.0 
+95: 0.125691 [0.122775,0.128607]  c_i: 0.6 0.05000001 0.1 1.0 1.0 1.0 
+96: 0.126822 [0.123895,0.129750]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+97: new gw 85742 current max 0.127231 [0.124299,0.130162]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+98: new gw 94316 current max 0.126935 [0.124007,0.129863]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+99: new gw 94316 current max 0.126532 [0.123744,0.129320]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+100: new gw 103747 current max 0.127011 [0.124218,0.129804]  c_i: 0.6 0.05000001 0.0 1.0 1.0 1.0 
+
+Simulation method parameters: width=0.0, confidence=0.01, number of samples=40000
+
+Simulation result details: confidence interval is NaN +/- 0.0, based on 99.0% confidence level
+
+Result: NaN
+
