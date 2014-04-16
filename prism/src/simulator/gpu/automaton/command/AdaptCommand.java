@@ -30,7 +30,7 @@ public class AdaptCommand implements CommandInterface
 		//TODO: WORKS ONLY ON BINARY
 		//TODO: fix when lower limit != 0
 		if (var != null) {
-			return var.maxValue + 1;
+			return var.maxValue - var.minValue + 1;
 		} else {
 			return 1;
 		}

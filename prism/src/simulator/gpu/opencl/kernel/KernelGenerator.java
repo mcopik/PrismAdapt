@@ -584,6 +584,7 @@ public abstract class KernelGenerator
 			sum = varSelectionSize.getSource();
 		}
 		IfElse deadlockState = new IfElse(createBasicExpression(sum, Operator.EQ, fromString(0)));
+		mainMethodUpdateProperties(deadlockState);
 		deadlockState.addExpression(new Expression("break;\n"));
 		ifElse.addExpression(deadlockState);
 		loop.addExpression(ifElse);
@@ -599,6 +600,8 @@ public abstract class KernelGenerator
 		 * other cases: compute time in Before method() 
 		 */
 		mainMethodUpdateTimeBefore(currentMethod, loop);
+		//		loop.addExpression(new Expression(
+		//				"if(stateVector.__STATE_VECTOR_tosses > 95 && stateVector.__STATE_VECTOR_head == 50 /*&& pathLength < 20*/)printf(\"end loop gID %d %d %d %d %d %d\\n\",globalID,pathLength,stateVector.__STATE_VECTOR_s,stateVector.__STATE_VECTOR_tosses,stateVector.__STATE_VECTOR_head,stateVector.__STATE_VECTOR_adapt_toss_diff);"));
 		/**
 		 * if all properties are known, then we can end iterating
 		 */
@@ -644,7 +647,7 @@ public abstract class KernelGenerator
 			Expression tabPosition = null;
 			if (adp.var != null) {
 				tabPosition = varStateVector.accessField(translateSVField(adp.var.name)).getSource();
-				tabPosition = createBasicExpression(tabPosition, Operator.ADD, fromString(accumulatedSum));
+				tabPosition = createBasicExpression(tabPosition, Operator.ADD, fromString(accumulatedSum - adp.var.minValue));
 			} else {
 				tabPosition = fromString(accumulatedSum);
 			}
@@ -672,9 +675,13 @@ public abstract class KernelGenerator
 		 * For CTMC&bounded until -> update current time.
 		 */
 		mainMethodUpdateTimeAfter(currentMethod, loop);
+		//		loop.addExpression(new Expression(
+		//				"if(stateVector.__STATE_VECTOR_tosses > 95 && stateVector.__STATE_VECTOR_head == 50 /*&& pathLength < 20*/)printf(\"end loop2 gID %d %d %d %d %d %d\\n\",globalID,pathLength,stateVector.__STATE_VECTOR_s,stateVector.__STATE_VECTOR_tosses,stateVector.__STATE_VECTOR_head,stateVector.__STATE_VECTOR_adapt_toss_diff);"));
+
 		mainMethodLoopDetection(loop);
 		//		loop.addExpression(new Expression(
-		//				"if(globalID<5 && pathLength < 20)printf(\"end loop gID %d %f %f %f %d %d %d\\n\",globalID,selection,selectionSize,synSelectionSize,stateVector.__STATE_VECTOR_q,stateVector.__STATE_VECTOR_s,stateVector.__STATE_VECTOR_s2);"));
+		//				"if(stateVector.__STATE_VECTOR_tosses > 95 && stateVector.__STATE_VECTOR_head == 50 /*&& pathLength < 20*/)printf(\"end loop3 gID %d %d %d %d %d %d\\n\",globalID,pathLength,stateVector.__STATE_VECTOR_s,stateVector.__STATE_VECTOR_tosses,stateVector.__STATE_VECTOR_head,stateVector.__STATE_VECTOR_adapt_toss_diff);"));
+
 		//loop.addExpression(new Expression("if(phase==4)break;"));
 		currentMethod.addExpression(loop);
 		/**

@@ -32,6 +32,7 @@ public class PrismVariable
 	public final int initValue;
 	public final int bitsNumber;
 	public final int maxValue;
+	public final int minValue;
 
 	/**
 	 * Constructor.
@@ -47,6 +48,7 @@ public class PrismVariable
 		initValue = init;
 		bitsNumber = bits;
 		maxValue = high;
+		minValue = low;
 	}
 
 	@Override

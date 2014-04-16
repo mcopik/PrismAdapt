@@ -364,53 +364,59 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 				if (posMax != -1) {
 					currentBest = current[posMax];
 					double width = (double) ((CIwidth) samplers[posMax].getSimulationMethod()).getMissingParameter();
-					//					// "przedłużanie"
-					//					float[] temp = Arrays.copyOf(currentBest, currentBest.length);
-					//					float[] oldTemp = null;
-					//					double newResult = simMax, oldResult = simMax;
-					//					boolean flag = false;
-					//					do {
-					//						oldResult = newResult;
-					//						oldTemp = Arrays.copyOf(temp, temp.length);
-					//						for (int j = 0; j < s; ++j) {
-					//							if (((posMax >> j) & 1) == 1) {
-					//								temp[changedPositions[j]] += CURRENT_STEP;
-					//							} else {
-					//								temp[changedPositions[j]] -= CURRENT_STEP;
-					//							}
-					//							if (temp[changedPositions[j]] < 0) {
-					//								flag = true;
-					//								break;
-					//							}
-					//							if (temp[changedPositions[j]] > 1.0) {
-					//								flag = true;
-					//								break;
-					//							}
-					//
-					//						}
-					//						if (flag == true)
-					//							break;
-					//						samplers[0].resetStats();
-					//						currentContexts.get(0).reset();
-					//						currentContexts.get(0).runSimulation(temp, samplers[0], samplesProcessed);
-					//						SimulationMethod sm_ = samplers[0].getSimulationMethod();
-					//						//TODO: temporal fix to avoid wrong width computation
-					//						sm_.shouldStopNow(currentContexts.get(0).getSamplesProcessed(), samplers[0]);
-					//						sm_.computeMissingParameterAfterSim();
-					//						Double result = (Double) sm_.getResult(samplers[0]);
-					//						newResult = result;
-					//						if (newResult > oldResult)
-					//							width = (double) ((CIwidth) sm_).getMissingParameter();
-					//						mainLog.println(String.format("ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY %f CURRENT BEST %f", newResult, simMax));
-					//					} while (newResult > oldResult);
-					//					if (oldResult > simMax) {
-					//						currentBest = Arrays.copyOf(oldTemp, oldTemp.length);
-					//					}
+					//"przedłużanie"
+					float[] temp = Arrays.copyOf(currentBest, currentBest.length);
+					float[] oldTemp = null;
+					double newResult = simMax, oldResult = simMax;
+					boolean flag = false;
+					do {
+						oldResult = newResult;
+						oldTemp = Arrays.copyOf(temp, temp.length);
+						for (int j = 0; j < s; ++j) {
+							if (((posMax >> j) & 1) == 1) {
+								temp[changedPositions[j]] += CURRENT_STEP;
+							} else {
+								temp[changedPositions[j]] -= CURRENT_STEP;
+							}
+							if (temp[changedPositions[j]] < 0) {
+								flag = true;
+								break;
+							}
+							if (temp[changedPositions[j]] > 1.0) {
+								flag = true;
+								break;
+							}
+
+						}
+						if (flag == true)
+							break;
+						samplers[0].resetStats();
+						currentContexts.get(0).reset();
+						currentContexts.get(0).runSimulation(temp, samplers[0], samplesProcessed);
+						SimulationMethod sm_ = samplers[0].getSimulationMethod();
+						//TODO: temporal fix to avoid wrong width computation
+						sm_.shouldStopNow(currentContexts.get(0).getSamplesProcessed(), samplers[0]);
+						sm_.computeMissingParameterAfterSim();
+						Double result = (Double) sm_.getResult(samplers[0]);
+						newResult = result;
+						if (newResult > oldResult)
+							width = (double) ((CIwidth) sm_).getMissingParameter();
+						mainLog.println(String.format("ADDITIONAL APPLICATION OF BEST, NEW PROBABILITY %f CURRENT BEST %f", newResult, simMax));
+					} while (newResult > oldResult);
+					if (oldResult > simMax) {
+						currentBest = Arrays.copyOf(oldTemp, oldTemp.length);
+						simMax = oldResult;
+					}
 					maxes.add(new Pair<String, float[]>(String.format("%f [%f,%f]", simMax, simMax - width, simMax + width), Arrays.copyOf(currentBest,
 							currentBest.length)));
 					gwChangeFlag = false;
 					GW_COUNT = 0;
 					mainLog.println(String.format("MAX %f [%f,%f]", simMax, simMax - width, simMax + width));
+					mainLog.print(String.format("c_i: "));
+					for (int j = 0; j < branchCount; ++j) {
+						mainLog.print(currentBest[j] + " ");
+					}
+					mainLog.println();
 					mainLog.flush();
 					//					if (Math.abs(simMax - oldMax) < width) {
 					//						APMCiterations test = new APMCiterations(0.01, Math.abs(simMax - oldMax) / 2);
@@ -456,7 +462,7 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 					maxes.add(new Pair<String, float[]>(String.format("new gw %d current max %f [%f,%f]", gw, simMax, simMax - width, simMax + width), Arrays
 							.copyOf(currentBest, currentBest.length)));
 				}
-				if (gw > 1500000 || iterations > 149)
+				if (gw > 1800000)
 					break;
 				++iterations;
 				mainLog.println("-----------");
