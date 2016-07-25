@@ -256,6 +256,7 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 		}
 		final float CURRENT_STEP = 0.05f;
 		CLDeviceWrapper device = currentDevices.get(0);
+        mainLog.println("Using: " + device.getName());
 		Sampler property = properties.get(0);
 		SimulationMethod sm = property.getSimulationMethod().clone();
 		// Take a copy
@@ -281,10 +282,19 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 			} else {
 				m = (int) Math.floor((float) branchCount / 2) + 1;
 			}
+            Random rnd = new Random();
+            rnd.setSeed(System.currentTimeMillis());
 			float[] currentBest = new float[branchCount];
 			for (int i = 0; i < branchCount; ++i) {
-				currentBest[i] = 0.5f;
+				currentBest[i] = rnd.nextFloat();
 			}
+            
+            //currentBes[0] = 0.8263691f;
+            //currentBest[1] = 0.8043951f;
+            //currentBest[2] = 0.6847447f;
+            //currentBest[3] = 0.96372974f;
+            //currentBest[4] = 0.6039024f;
+            //currentBest[5] = 0.8015622f;
 			int max = (int) Math.pow(2, m);
 			//int max = (int) Math.pow(2, branchCount);
 			for (int i = 0; i < max; ++i) {
@@ -292,8 +302,8 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 				currentContext.createKernel(model, properties, config);
 				currentContexts.add(currentContext);
 			}
-			Random rnd = new Random();
-			rnd.setSeed(System.currentTimeMillis());
+			//Random rnd = new Random();
+			//rnd.setSeed(System.currentTimeMillis());
 			int iterations = 0;
 			double simMax = 0.0;
 			int posMax = -1;
