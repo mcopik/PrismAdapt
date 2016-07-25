@@ -271,9 +271,11 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 			propNew = (Expression) propNew.replaceConstants(pf.getConstantValues());
 		}
 		sm.setExpression(propNew);
+		int gw = 10000;
 		currentContexts = new ArrayList<>();
-		int gw = 40000;
 		int GW_COUNT = 0;
+		
+		double current_time = 0.0;
 		try {
 			int m = 0;
 			if (branchCount > 5) {
@@ -282,9 +284,15 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 				m = (int) Math.floor((float) branchCount / 2) + 1;
 			}
 			float[] currentBest = new float[branchCount];
-			for (int i = 0; i < branchCount; ++i) {
-				currentBest[i] = 0.5f;
-			}
+			//for (int i = 0; i < branchCount; ++i) {
+				//currentBest[i] = 0.5f;
+			//}
+			currentBest[0] = 0.8263691f;
+			currentBest[1] = 0.8043951f;
+			currentBest[2] = 0.6847447f;
+			currentBest[3] = 0.96372974f;
+			currentBest[4] = 0.6039024f;
+			//currentBest[5] = 0.8015622f;
 			int max = (int) Math.pow(2, m);
 			//int max = (int) Math.pow(2, branchCount);
 			for (int i = 0; i < max; ++i) {
@@ -357,6 +365,7 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 					mainLog.println();
 					mainLog.println(String.format("Sampling: %d samples in %d miliseconds.", currentContexts.get(i).getSamplesProcessed(),
 							currentContexts.get(i).getTime()));
+					current_time += currentContexts.get(i).getTime() / 1000.0;
 					mainLog.println(String.format("Path length: min %d, max %d, avg %f", currentContexts.get(i).getMinPathLength(), currentContexts.get(i)
 							.getMaxPathLength(), currentContexts.get(i).getAvgPathLength()));
 					samplesProcessed += currentContexts.get(i).getSamplesProcessed();
@@ -407,8 +416,9 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 						currentBest = Arrays.copyOf(oldTemp, oldTemp.length);
 						simMax = oldResult;
 					}
-					maxes.add(new Pair<String, float[]>(String.format("%f [%f,%f]", simMax, simMax - width, simMax + width), Arrays.copyOf(currentBest,
-							currentBest.length)));
+					maxes.add(new Pair<String, float[]>(String.format("%d %d %f %d %f %f %f", iterations, gw, 
+							current_time, samplesProcessed, simMax, simMax - width, simMax + width),
+							Arrays.copyOf(currentBest, currentBest.length)));
 					gwChangeFlag = false;
 					GW_COUNT = 0;
 					mainLog.println(String.format("MAX %f [%f,%f]", simMax, simMax - width, simMax + width));
@@ -464,12 +474,16 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 				}
 				if (gw > 1800000)
 					break;
+				if (current_time > 1000)
+					break;
 				++iterations;
 				mainLog.println("-----------");
 				mainLog.flush();
 			}
+			mainLog.println(String.format("e_max: %d I_max: %d e_increase: %f step: %f", 0, 0, 0.0f, CURRENT_STEP));
 			for (int i = 0; i < maxes.size(); ++i) {
-				mainLog.print(String.format("%d: %s  c_i: ", i, maxes.get(i).first));
+				//mainLog.print(String.format("%d: %s  c_i: ", i, maxes.get(i).first));
+				mainLog.print(maxes.get(i).first + " ");
 				for (int j = 0; j < branchCount; ++j) {
 					mainLog.print(maxes.get(i).second[j] + " ");
 				}
