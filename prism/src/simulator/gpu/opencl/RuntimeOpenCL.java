@@ -272,7 +272,7 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 			propNew = (Expression) propNew.replaceConstants(pf.getConstantValues());
 		}
 		sm.setExpression(propNew);
-		int gw = 10000;
+		int gw = 40000;
 		currentContexts = new ArrayList<>();
 		int GW_COUNT = 0;
 		
@@ -291,7 +291,7 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 				currentBest[i] = rnd.nextFloat();
 			}
             
-            //currentBes[0] = 0.8263691f;
+            //currentBest[0] = 0.8263691f;
             //currentBest[1] = 0.8043951f;
             //currentBest[2] = 0.6847447f;
             //currentBest[3] = 0.96372974f;
@@ -473,13 +473,17 @@ public class RuntimeOpenCL implements RuntimeFrameworkInterface
 					Double result = (Double) sm_.getResult(samplers[0]);
 					simMax = result;
 					mainLog.println(String.format("new gw %d current max %f", gw, simMax));
-					maxes.add(new Pair<String, float[]>(String.format("new gw %d current max %f [%f,%f]", gw, simMax, simMax - width, simMax + width), Arrays
-							.copyOf(currentBest, currentBest.length)));
+
+					maxes.add(new Pair<String, float[]>(String.format("%d %d %f %d %f %f %f", iterations, gw, 
+							current_time, samplesProcessed, simMax, simMax - width, simMax + width),
+							Arrays.copyOf(currentBest, currentBest.length)));
+                    //maxes.add(new Pair<String, float[]>(String.format("new gw %d current max %f [%f,%f]", gw, simMax, simMax - width, simMax + width), Arrays
+					//		.copyOf(currentBest, currentBest.length)));
 				}
 				if (gw > 1800000)
 					break;
-				if (current_time > 1000)
-					break;
+				//if (current_time > 1000)
+				//	break;
 				++iterations;
 				mainLog.println("-----------");
 				mainLog.flush();
